@@ -1,0 +1,70 @@
+{
+    "name": "digitaldev-lx/laravel-invoice-express",
+    "description": "A Laravel package for integrating with the InvoiceXpress API V2 (Portuguese invoicing).",
+    "keywords": [
+        "laravel",
+        "invoiceexpress",
+        "invoicexpress",
+        "invoicing",
+        "portugal",
+        "faturacao",
+        "saft",
+        "digitaldev"
+    ],
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "DigitalDev",
+            "email": "geral@digitaldev.pt",
+            "role": "Development Team"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "laravel/framework": "^12.0 || ^13.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.0 || ^11.0",
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-laravel": "^4.1",
+        "larastan/larastan": "^3.0",
+        "phpstan/phpstan": "^2.0",
+        "laravel/pint": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "DigitaldevLx\\LaravelInvoiceExpress\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "DigitaldevLx\\LaravelInvoiceExpress\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test:coverage": "vendor/bin/pest --coverage --min=80",
+        "analyse": "vendor/bin/phpstan analyse",
+        "format": "vendor/bin/pint",
+        "format:test": "vendor/bin/pint --test"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "DigitaldevLx\\LaravelInvoiceExpress\\Providers\\InvoiceExpressServiceProvider"
+            ],
+            "aliases": {
+                "InvoiceExpress": "DigitaldevLx\\LaravelInvoiceExpress\\Facades\\InvoiceExpress"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

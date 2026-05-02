@@ -1,0 +1,90 @@
+<?php
+
+declare(strict_types=1);
+
+namespace DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects;
+
+use DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects\Contracts\DataTransferObject;
+use DigitaldevLx\LaravelInvoiceExpress\Enums\EstimateType;
+
+final readonly class Estimate implements DataTransferObject
+{
+    /**
+     * @param  array<int, DocumentItem>|null  $items
+     * @param  array<string, mixed>|null  $client
+     * @param  array<string, mixed>|null  $extra
+     */
+    public function __construct(
+        public EstimateType $type = EstimateType::Quote,
+        public ?string $date = null,
+        public ?string $dueDate = null,
+        public ?string $reference = null,
+        public ?string $observations = null,
+        public ?string $taxExemption = null,
+        public ?int $sequenceId = null,
+        public ?int $manualSequenceNumber = null,
+        public ?array $items = null,
+        public ?array $client = null,
+        public ?string $owner = null,
+        public ?array $extra = null,
+    ) {}
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        $base = array_filter([
+            'date' => $this->date,
+            'due_date' => $this->dueDate,
+            'reference' => $this->reference,
+            'observations' => $this->observations,
+            'tax_exemption' => $this->taxExemption,
+            'sequence_id' => $this->sequenceId,
+            'manual_sequence_number' => $this->manualSequenceNumber,
+            'items' => $this->items === null
+                ? null
+                : ['item' => array_map(static fn (DocumentItem $item): array => $item->toArray(), $this->items)],
+            'client' => $this->client,
+            'owner_name' => $this->owner,
+        ], static fn (mixed $value): bool => $value !== null);
+
+        if ($this->extra !== null) {
+            $base = [...$base, ...$this->extra];
+        }
+
+        return $base;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public static function fromArray(array $data): static
+    {
+        $items = null;
+        if (isset($data['items']['item']) && is_array($data['items']['item'])) {
+            $items = array_map(
+                static fn (array $item): DocumentItem => DocumentItem::fromArray($item),
+                $data['items']['item'],
+            );
+        }
+
+        $type = isset($data['type']) && is_string($data['type'])
+            ? (EstimateType::tryFrom($data['type']) ?? EstimateType::Quote)
+            : EstimateType::Quote;
+
+        return new self(
+            type: $type,
+            date: isset($data['date']) && is_string($data['date']) ? $data['date'] : null,
+            dueDate: isset($data['due_date']) && is_string($data['due_date']) ? $data['due_date'] : null,
+            reference: isset($data['reference']) && is_string($data['reference']) ? $data['reference'] : null,
+            observations: isset($data['observations']) && is_string($data['observations']) ? $data['observations'] : null,
+            taxExemption: isset($data['tax_exemption']) && is_string($data['tax_exemption']) ? $data['tax_exemption'] : null,
+            sequenceId: isset($data['sequence_id']) ? (int) $data['sequence_id'] : null,
+            manualSequenceNumber: isset($data['manual_sequence_number']) ? (int) $data['manual_sequence_number'] : null,
+            items: $items,
+            client: isset($data['client']) && is_array($data['client']) ? $data['client'] : null,
+            owner: isset($data['owner_name']) && is_string($data['owner_name']) ? $data['owner_name'] : null,
+        );
+    }
+}
