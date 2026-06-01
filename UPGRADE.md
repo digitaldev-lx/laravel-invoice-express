@@ -1,5 +1,48 @@
 # Upgrade Guide
 
+## 2.1.0 → 3.0.0 (decimal integrity)
+
+**Breaking:** monetary and decimal DTO fields changed from `float` to `string` so
+money is never routed through PHP's lossy `float` type.
+
+Affected properties — now `string` (or `?string`):
+
+- `Payment::$amount`
+- `DocumentItem::$quantity`, `$unitPrice`, `$discount`
+- `Item::$unitPrice`, `$taxRate`
+- `Tax::$value`
+- `Account::$openingBalance`
+- `Client::$discount`
+- `TreasuryMovement::$amount`
+
+**Action required:**
+
+1. Construct DTOs with string values:
+
+   ```php
+   // before
+   new Payment(paymentMechanism: PaymentMethod::BankTransfer, amount: 492.00);
+   new DocumentItem(name: 'Hour', quantity: 4, unitPrice: 100.00);
+
+   // after
+   new Payment(paymentMechanism: PaymentMethod::BankTransfer, amount: '492.00');
+   new DocumentItem(name: 'Hour', quantity: '4', unitPrice: '100.00');
+   ```
+
+2. When you read these properties they are now strings. Cast to `float` only at
+   the edge where you actually compute, and prefer `bcmath` for money:
+
+   ```php
+   $total = bcmul($item->unitPrice, $item->quantity, 2); // exact
+   ```
+
+3. `toArray()` emits these fields as strings now. Update any test snapshots or
+   comparisons that asserted the old float output.
+
+**Why:** PHP `float` cannot represent decimal money exactly (`0.1 + 0.2 !== 0.3`).
+Strings preserve the exact value end-to-end and InvoiceXpress accepts decimal
+strings, so `'10.50'` survives the round-trip unchanged.
+
 ## 2.0.0 → 2.1.0
 
 No breaking changes. Two new **opt-in** security features worth enabling:

@@ -15,11 +15,11 @@ it('wraps items inside the items->item envelope expected by the API', function (
         items: [
             new DocumentItem(
                 name: 'Hora',
-                quantity: 2,
-                unitPrice: 50.0,
-                tax: new Tax(name: 'IVA23', value: 23.0),
+                quantity: '2',
+                unitPrice: '50.0',
+                tax: new Tax(name: 'IVA23', value: '23.0'),
             ),
-            new DocumentItem(name: 'Setup', unitPrice: 100.0),
+            new DocumentItem(name: 'Setup', unitPrice: '100.0'),
         ],
         client: ['name' => 'Acme'],
     );

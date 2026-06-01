@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects;
 
 use DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects\Contracts\DataTransferObject;
+use DigitaldevLx\LaravelInvoiceExpress\Support\Decimals;
 
 final readonly class Tax implements DataTransferObject
 {
     public function __construct(
         public ?string $name = null,
-        public ?float $value = null,
+        public ?string $value = null,
         public ?string $region = null,
         public ?string $code = null,
         public ?bool $defaultTax = null,
@@ -39,7 +40,7 @@ final readonly class Tax implements DataTransferObject
     {
         return new self(
             name: isset($data['name']) && is_string($data['name']) ? $data['name'] : null,
-            value: isset($data['value']) ? (float) $data['value'] : null,
+            value: Decimals::toString($data['value'] ?? null),
             region: isset($data['region']) && is_string($data['region']) ? $data['region'] : null,
             code: isset($data['code']) && is_string($data['code']) ? $data['code'] : null,
             defaultTax: isset($data['default_tax']) ? (bool) $data['default_tax'] : null,

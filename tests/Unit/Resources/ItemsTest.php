@@ -20,7 +20,7 @@ it('creates an item via POST items.json', function (): void {
     $result = InvoiceExpress::items()->create(new ItemDto(
         name: 'Widget',
         description: 'A small widget',
-        unitPrice: 9.99,
+        unitPrice: '9.99',
     ));
 
     expect($result['id'])->toBe(5);

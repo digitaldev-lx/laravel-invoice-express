@@ -9,7 +9,7 @@ it('serialises a purchase order with line items and supplier', function (): void
     $po = new PurchaseOrder(
         date: '2026-05-01',
         deliveryDate: '2026-05-10',
-        items: [new DocumentItem(name: 'Sourcing', unitPrice: 100.0)],
+        items: [new DocumentItem(name: 'Sourcing', unitPrice: '100.0')],
         supplier: ['name' => 'Vendor'],
     );
 

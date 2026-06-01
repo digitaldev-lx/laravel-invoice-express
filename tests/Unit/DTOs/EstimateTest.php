@@ -10,7 +10,7 @@ it('serialises an estimate with its line items', function (): void {
     $estimate = new Estimate(
         type: EstimateType::Quote,
         date: '2026-05-01',
-        items: [new DocumentItem(name: 'Hour', unitPrice: 50.0)],
+        items: [new DocumentItem(name: 'Hour', unitPrice: '50.0')],
         client: ['name' => 'Acme'],
     );
 

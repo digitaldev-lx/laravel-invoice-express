@@ -14,7 +14,7 @@ it('serialises transport-specific fields', function (): void {
         loadedFrom: 'Lisboa',
         loadedTo: 'Porto',
         vehicleRegistration: '00-AA-00',
-        items: [new DocumentItem(name: 'Pallet', quantity: 2)],
+        items: [new DocumentItem(name: 'Pallet', quantity: '2')],
     );
 
     $payload = $guide->toArray();

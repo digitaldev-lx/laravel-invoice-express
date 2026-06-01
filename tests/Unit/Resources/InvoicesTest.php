@@ -51,9 +51,9 @@ it('creates an invoice and dispatches DocumentCreated', function (): void {
         items: [
             new DocumentItem(
                 name: 'Consulting',
-                quantity: 1,
-                unitPrice: 100.0,
-                tax: new Tax(name: 'IVA23', value: 23.0),
+                quantity: '1',
+                unitPrice: '100.0',
+                tax: new Tax(name: 'IVA23', value: '23.0'),
             ),
         ],
         client: ['name' => 'Acme'],

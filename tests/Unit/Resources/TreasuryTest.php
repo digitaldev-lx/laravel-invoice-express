@@ -16,7 +16,7 @@ it('creates a treasury movement', function (): void {
     $result = InvoiceExpress::treasury()->create(
         new TreasuryMovement(
             accountId: 1,
-            amount: 100.0,
+            amount: '100.0',
             date: '2026-05-15',
             movementType: 'credit',
         ),

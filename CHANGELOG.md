@@ -5,6 +5,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-06-01
+
+Decimal-integrity release. **Contains breaking changes** — see [UPGRADE.md](UPGRADE.md).
+
+### Changed
+- **BREAKING:** every monetary / decimal DTO property is now typed `string` (was `float`), so money never round-trips through PHP's lossy `float` type (`0.1 + 0.2 !== 0.3`):
+  - `Payment::$amount`
+  - `DocumentItem::$quantity`, `DocumentItem::$unitPrice`, `DocumentItem::$discount`
+  - `Item::$unitPrice`, `Item::$taxRate`
+  - `Tax::$value`
+  - `Account::$openingBalance`
+  - `Client::$discount`
+  - `TreasuryMovement::$amount`
+
+  Construct with strings (`amount: '492.00'`), read them as strings, and `toArray()` now emits strings. A value supplied as a string is preserved exactly — `'10.50'` no longer collapses to `10.5`.
+
+### Added
+- `DigitaldevLx\LaravelInvoiceExpress\Support\Decimals::toString()` — normalises mixed numeric input to an exact decimal string without float coercion.
+
 ## [2.1.0] - 2026-06-01
 
 Follow-up security hardening from the audit. No breaking changes.

@@ -7,6 +7,7 @@ namespace DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects;
 use DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects\Contracts\DataTransferObject;
 use DigitaldevLx\LaravelInvoiceExpress\Enums\Country;
 use DigitaldevLx\LaravelInvoiceExpress\Enums\Language;
+use DigitaldevLx\LaravelInvoiceExpress\Support\Decimals;
 
 final readonly class Client implements DataTransferObject
 {
@@ -26,7 +27,7 @@ final readonly class Client implements DataTransferObject
         public ?string $observations = null,
         public ?string $sendOptions = null,
         public ?string $preferredContactName = null,
-        public ?float $discount = null,
+        public ?string $discount = null,
     ) {}
 
     /**
@@ -86,7 +87,7 @@ final readonly class Client implements DataTransferObject
             observations: isset($data['observations']) && is_string($data['observations']) ? $data['observations'] : null,
             sendOptions: isset($data['send_options']) && is_string($data['send_options']) ? $data['send_options'] : null,
             preferredContactName: isset($data['preferred_contact_name']) && is_string($data['preferred_contact_name']) ? $data['preferred_contact_name'] : null,
-            discount: isset($data['discount']) ? (float) $data['discount'] : null,
+            discount: Decimals::toString($data['discount'] ?? null),
         );
     }
 }

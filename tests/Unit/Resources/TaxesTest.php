@@ -13,7 +13,7 @@ it('creates a tax', function (): void {
         ], 201),
     ]);
 
-    $result = InvoiceExpress::taxes()->create(new Tax(name: 'IVA23', value: 23.0, region: 'PT'));
+    $result = InvoiceExpress::taxes()->create(new Tax(name: 'IVA23', value: '23.0', region: 'PT'));
 
     expect($result['id'])->toBe(1);
 });

@@ -48,7 +48,7 @@ it('hydrates from a remote response', function (): void {
     expect($client->fiscalId)->toBe('500000000');
     expect($client->country)->toBe(Country::PT);
     expect($client->language)->toBe(Language::PT);
-    expect($client->discount)->toBe(5.0);
+    expect($client->discount)->toBe('5.0');
 });
 
 it('keeps preferred_contact_name as a string', function (): void {

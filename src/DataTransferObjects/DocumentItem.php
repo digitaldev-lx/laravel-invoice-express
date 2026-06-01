@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects;
 
 use DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects\Contracts\DataTransferObject;
+use DigitaldevLx\LaravelInvoiceExpress\Support\Decimals;
 
 final readonly class DocumentItem implements DataTransferObject
 {
     public function __construct(
         public string $name,
         public ?string $description = null,
-        public float $quantity = 1.0,
-        public ?float $unitPrice = null,
-        public ?float $discount = null,
+        public string $quantity = '1',
+        public ?string $unitPrice = null,
+        public ?string $discount = null,
         public ?string $unit = null,
         public ?Tax $tax = null,
     ) {}
@@ -44,9 +45,9 @@ final readonly class DocumentItem implements DataTransferObject
         return new self(
             name: isset($data['name']) && is_string($data['name']) ? $data['name'] : '',
             description: isset($data['description']) && is_string($data['description']) ? $data['description'] : null,
-            quantity: isset($data['quantity']) ? (float) $data['quantity'] : 1.0,
-            unitPrice: isset($data['unit_price']) ? (float) $data['unit_price'] : null,
-            discount: isset($data['discount']) ? (float) $data['discount'] : null,
+            quantity: Decimals::toString($data['quantity'] ?? null) ?? '1',
+            unitPrice: Decimals::toString($data['unit_price'] ?? null),
+            discount: Decimals::toString($data['discount'] ?? null),
             unit: isset($data['unit']) && is_string($data['unit']) ? $data['unit'] : null,
             tax: $tax,
         );

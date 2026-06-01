@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects;
 
 use DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects\Contracts\DataTransferObject;
+use DigitaldevLx\LaravelInvoiceExpress\Support\Decimals;
 
 final readonly class TreasuryMovement implements DataTransferObject
 {
     public function __construct(
         public int $accountId,
-        public float $amount,
+        public string $amount,
         public string $date,
         public ?string $description = null,
         public ?string $movementType = null,
@@ -41,7 +42,7 @@ final readonly class TreasuryMovement implements DataTransferObject
     {
         return new self(
             accountId: isset($data['account_id']) ? (int) $data['account_id'] : 0,
-            amount: isset($data['amount']) ? (float) $data['amount'] : 0.0,
+            amount: Decimals::toString($data['amount'] ?? null) ?? '0',
             date: isset($data['date']) && is_string($data['date']) ? $data['date'] : '',
             description: isset($data['description']) && is_string($data['description']) ? $data['description'] : null,
             movementType: isset($data['movement_type']) && is_string($data['movement_type']) ? $data['movement_type'] : null,

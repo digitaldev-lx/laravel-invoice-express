@@ -6,12 +6,13 @@ namespace DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects;
 
 use DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects\Contracts\DataTransferObject;
 use DigitaldevLx\LaravelInvoiceExpress\Enums\PaymentMethod;
+use DigitaldevLx\LaravelInvoiceExpress\Support\Decimals;
 
 final readonly class Payment implements DataTransferObject
 {
     public function __construct(
         public PaymentMethod|string $paymentMechanism,
-        public float $amount,
+        public string $amount,
         public ?string $paymentDate = null,
         public ?string $serie = null,
         public ?string $observations = null,
@@ -48,7 +49,7 @@ final readonly class Payment implements DataTransferObject
 
         return new self(
             paymentMechanism: $mechanism,
-            amount: isset($data['amount']) ? (float) $data['amount'] : 0.0,
+            amount: Decimals::toString($data['amount'] ?? null) ?? '0',
             paymentDate: isset($data['payment_date']) && is_string($data['payment_date']) ? $data['payment_date'] : null,
             serie: isset($data['serie']) && is_string($data['serie']) ? $data['serie'] : null,
             observations: isset($data['observations']) && is_string($data['observations']) ? $data['observations'] : null,

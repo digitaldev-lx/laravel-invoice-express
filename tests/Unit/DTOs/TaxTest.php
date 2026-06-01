@@ -7,7 +7,7 @@ use DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects\Tax;
 it('serialises a Tax with all fields set', function (): void {
     $tax = new Tax(
         name: 'IVA23',
-        value: 23.0,
+        value: '23.0',
         region: 'PT',
         code: 'NOR',
         defaultTax: true,
@@ -16,7 +16,7 @@ it('serialises a Tax with all fields set', function (): void {
 
     expect($tax->toArray())->toBe([
         'name' => 'IVA23',
-        'value' => 23.0,
+        'value' => '23.0',
         'region' => 'PT',
         'code' => 'NOR',
         'default_tax' => true,
@@ -35,7 +35,7 @@ it('round-trips through fromArray', function (): void {
     $tax = Tax::fromArray($payload);
 
     expect($tax->name)->toBe('IVA6');
-    expect($tax->value)->toBe(6.0);
+    expect($tax->value)->toBe('6.0');
     expect($tax->region)->toBe('PT-MA');
     expect($tax->code)->toBe('RED');
 });

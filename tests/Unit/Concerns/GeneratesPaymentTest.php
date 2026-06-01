@@ -23,7 +23,7 @@ it('records a payment via partial_payments.json', function (): void {
         id: 9,
         payment: new Payment(
             paymentMechanism: PaymentMethod::BankTransfer,
-            amount: 50.0,
+            amount: '50.0',
             paymentDate: '2026-05-15',
         ),
     );

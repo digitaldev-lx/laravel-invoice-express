@@ -161,9 +161,9 @@ $invoice = InvoiceExpress::invoices()->create(new Invoice(
     items: [
         new DocumentItem(
             name: 'Consultoria',
-            quantity: 4,
-            unitPrice: 100.00,
-            tax: new Tax(name: 'IVA23', value: 23.0),
+            quantity: '4',
+            unitPrice: '100.00',
+            tax: new Tax(name: 'IVA23', value: '23.0'),
         ),
     ],
     client: ['name' => 'Acme Lda', 'fiscal_id' => '500000000'],
@@ -186,7 +186,7 @@ InvoiceExpress::invoices()->email($invoiceId, new EmailMessage(
 // 5. Mark as paid when the bank wire arrives
 InvoiceExpress::invoices()->payment($invoiceId, new Payment(
     paymentMechanism: PaymentMethod::BankTransfer,
-    amount: 492.00,
+    amount: '492.00',
     paymentDate: '2026-05-15',
 ));
 ```
@@ -264,14 +264,14 @@ InvoiceExpress::items()->find($id);
 InvoiceExpress::items()->create(new Item(
     name: 'Consultoria',
     description: 'Hora de consultoria sénior',
-    unitPrice: 100.00,
+    unitPrice: '100.00',
     unit: 'h',
     taxId: 7,
     taxName: 'IVA23',
-    taxRate: 23.0,
+    taxRate: '23.0',
 ));
 
-InvoiceExpress::items()->update($id, ['unit_price' => 125.00]);
+InvoiceExpress::items()->update($id, ['unit_price' => '125.00']);
 InvoiceExpress::items()->delete($id);
 ```
 
@@ -342,14 +342,14 @@ InvoiceExpress::treasury()->find($id);
 
 InvoiceExpress::treasury()->create(new TreasuryMovement(
     accountId: 1,
-    amount: 250.00,
+    amount: '250.00',
     date: '2026-05-15',
     description: 'Recebimento Acme',
     movementType: 'credit',
     categoryId: 5,
 ));
 
-InvoiceExpress::treasury()->update($id, ['amount' => 300.0]);
+InvoiceExpress::treasury()->update($id, ['amount' => '300.0']);
 InvoiceExpress::treasury()->delete($id);
 
 // Helpers
@@ -420,7 +420,7 @@ $quote = InvoiceExpress::estimates()->create(new Estimate(
     type: EstimateType::Quote,
     date: '2026-05-01',
     dueDate: '2026-06-01',
-    items: [new DocumentItem(name: 'Hour', unitPrice: 50.0)],
+    items: [new DocumentItem(name: 'Hour', unitPrice: '50.0')],
     client: ['name' => 'Acme'],
 ));
 
@@ -448,7 +448,7 @@ InvoiceExpress::guides()->create(new Guide(
     loadedFrom: 'Lisboa',
     loadedTo: 'Porto',
     vehicleRegistration: '00-AA-00',
-    items: [new DocumentItem(name: 'Pallet', quantity: 2)],
+    items: [new DocumentItem(name: 'Pallet', quantity: '2')],
     client: ['name' => 'Acme'],
 ));
 ```
@@ -462,7 +462,7 @@ InvoiceExpress::purchaseOrders()->find($id);
 InvoiceExpress::purchaseOrders()->create(new PurchaseOrder(
     date: '2026-05-15',
     deliveryDate: '2026-05-25',
-    items: [new DocumentItem(name: 'Sourcing', unitPrice: 1000.0)],
+    items: [new DocumentItem(name: 'Sourcing', unitPrice: '1000.0')],
     supplier: ['name' => 'Vendor Lda', 'fiscal_id' => '500000001'],
 ));
 
@@ -575,7 +575,7 @@ use DigitaldevLx\LaravelInvoiceExpress\Enums\PaymentMethod;
 // Register a payment against an invoice
 InvoiceExpress::invoices()->payment($id, new Payment(
     paymentMechanism: PaymentMethod::BankTransfer,
-    amount: 246.00,
+    amount: '246.00',
     paymentDate: '2026-05-15',
     observations: 'IBAN PT50…',
 ));
@@ -750,7 +750,7 @@ $order->finalizeInvoiceXpress();
 $order->emailInvoiceXpress($emailMessage);
 $order->settleInvoiceXpress(new Payment(
     paymentMechanism: PaymentMethod::BankTransfer,
-    amount: $order->total,
+    amount: (string) $order->total,
     paymentDate: now()->toDateString(),
 ));
 $order->cancelInvoiceXpress('Customer refunded');
@@ -926,6 +926,8 @@ All DTOs are `final readonly class` and implement a `toArray()` / `fromArray()` 
 | `WebhookPayload` | Decoded webhook event |
 
 All DTOs accept either typed enums or their raw string equivalents to keep the call sites flexible.
+
+> **Monetary & decimal values are strings, not floats.** Amounts, unit prices, quantities, discounts and tax rates (`Payment::$amount`, `DocumentItem::$unitPrice`/`$quantity`/`$discount`, `Item::$unitPrice`/`$taxRate`, `Tax::$value`, `Account::$openingBalance`, `Client::$discount`, `TreasuryMovement::$amount`) are typed `string` to preserve exact decimals — passing them through PHP's `float` silently loses precision (`0.1 + 0.2`). Pass `'100.00'`, not `100.00`. Values read from the API are normalised to strings verbatim, so `'10.50'` round-trips unchanged.
 
 ---
 
