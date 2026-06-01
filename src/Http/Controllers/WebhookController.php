@@ -38,14 +38,25 @@ final class WebhookController extends Controller
         $body = $request->json()->all();
         $payload = WebhookPayload::fromArray($body);
 
-        if ($this->config->get('invoiceexpress.webhooks.log_payloads', true) === true) {
-            InvoiceExpressWebhookLog::query()->create([
+        $logPayloads = $this->config->get('invoiceexpress.webhooks.log_payloads', true) === true;
+
+        // Idempotency: dedupe on the raw body digest. firstOrCreate + the unique
+        // index on dedup_key make this race-safe (a concurrent duplicate hits the
+        // constraint and re-reads the existing row, so wasRecentlyCreated stays
+        // false and we never dispatch the same callback twice).
+        $log = InvoiceExpressWebhookLog::query()->firstOrCreate(
+            ['dedup_key' => hash('sha256', $rawBody)],
+            [
                 'event' => $payload->event->value,
                 'document_id' => $payload->documentId,
                 'document_type' => $payload->documentType?->value,
-                'payload' => $body,
+                'payload' => $logPayloads ? $body : [],
                 'received_at' => now(),
-            ]);
+            ],
+        );
+
+        if (! $log->wasRecentlyCreated) {
+            return response()->json(['status' => 'duplicate']);
         }
 
         $this->handler->dispatch($payload);

@@ -127,3 +127,52 @@ it('dispatches DocumentCreated when the event matches', function (): void {
         static fn (DocumentCreated $event): bool => $event->type === DocumentType::CreditNote,
     );
 });
+
+it('processes a replayed webhook only once (idempotency)', function (): void {
+    Event::fake();
+
+    $payload = [
+        'event' => WebhookEvent::DocumentPaid->value,
+        'document_id' => 99,
+        'document_type' => DocumentType::Invoice->value,
+        'occurred_at' => '2026-05-01T10:00:00Z',
+        'payload' => ['id' => 99, 'status' => 'settled'],
+    ];
+    $signed = signWebhookPayload($payload);
+    $headers = ['X-InvoiceXpress-Signature' => $signed['header']];
+
+    $this->postJson('/invoiceexpress/webhooks', $signed['body'], $headers)
+        ->assertOk()
+        ->assertJson(['status' => 'ok']);
+
+    $this->postJson('/invoiceexpress/webhooks', $signed['body'], $headers)
+        ->assertOk()
+        ->assertJson(['status' => 'duplicate']);
+
+    expect(InvoiceExpressWebhookLog::query()->count())->toBe(1);
+    Event::assertDispatchedTimes(DocumentPaid::class, 1);
+    Event::assertDispatchedTimes(WebhookReceived::class, 1);
+});
+
+it('rejects an unsigned webhook when no secret is configured (fail-closed)', function (): void {
+    Event::fake();
+    config()->set('invoiceexpress.webhooks.signing_secret', null);
+    config()->set('invoiceexpress.webhooks.allow_unsigned', false);
+
+    $payload = ['event' => WebhookEvent::DocumentPaid->value, 'document_id' => 5];
+
+    $response = $this->postJson('/invoiceexpress/webhooks', $payload);
+
+    expect($response->status())->toBeGreaterThanOrEqual(400);
+    Event::assertDispatched(WebhookSignatureFailed::class);
+    Event::assertNotDispatched(WebhookReceived::class);
+    expect(InvoiceExpressWebhookLog::query()->count())->toBe(0);
+});
+
+it('protects the state-changing webhook route with throttle middleware', function (): void {
+    $route = collect(app('router')->getRoutes()->getRoutes())
+        ->first(static fn ($r): bool => $r->getName() === 'invoiceexpress.webhooks.handle');
+
+    expect($route)->not->toBeNull();
+    expect($route->gatherMiddleware())->toContain('throttle:60,1');
+});

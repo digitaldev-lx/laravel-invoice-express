@@ -19,11 +19,22 @@ final class WebhookSignatureVerifier
         $secret = $this->config->get('invoiceexpress.webhooks.signing_secret');
 
         if (! is_string($secret) || $secret === '') {
-            $this->logger?->warning(
-                'InvoiceXpress webhook signature verification skipped: no signing secret configured.',
+            // Fail closed: an unconfigured secret must never grant blanket trust.
+            // Operators that genuinely run without a secret (e.g. local tunnels)
+            // must opt in explicitly via webhooks.allow_unsigned.
+            if ((bool) $this->config->get('invoiceexpress.webhooks.allow_unsigned', false)) {
+                $this->logger?->warning(
+                    'InvoiceXpress webhook signature verification DISABLED (allow_unsigned=true). Do not use in production.',
+                );
+
+                return true;
+            }
+
+            $this->logger?->error(
+                'InvoiceXpress webhook rejected: no signing secret configured and allow_unsigned is false.',
             );
 
-            return true;
+            return false;
         }
 
         if ($signature === null || $signature === '') {

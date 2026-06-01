@@ -5,6 +5,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-06-01
+
+Security hardening of the webhook receiver. Contains breaking changes — see [UPGRADE.md](UPGRADE.md).
+
+### Security
+- **Webhook signature verification is now fail-closed.** Previously an unset `webhooks.signing_secret` made the verifier accept *every* callback as valid (a warning was logged), so an unauthenticated request could forge `document.paid` / `document.canceled` events. Verification now **rejects** all callbacks when no secret is configured, unless `webhooks.allow_unsigned=true` is set explicitly (intended for local development only).
+- **Replay / idempotency protection.** Callbacks are deduplicated on a unique `dedup_key` (SHA-256 of the raw body) stored on `invoice_express_webhook_logs`; a replayed delivery is recorded and dispatched only once. The dedup is race-safe (`firstOrCreate` + unique index).
+- **The state-changing webhook endpoint is now rate-limited by default** (`throttle:60,1`).
+
+### Added
+- `webhooks.allow_unsigned` config flag (default `false`) — explicit opt-in to accept unsigned callbacks during local development. **Never enable in production.**
+- Migration `add_dedup_key_to_invoice_express_webhook_logs_table` — adds a unique `dedup_key` column to the webhook log table.
+- `UPGRADE.md` with step-by-step migration guidance.
+
+### Changed
+- **BREAKING:** `WebhookSignatureVerifier::verify()` now returns `false` (instead of `true`) when no signing secret is configured, unless `webhooks.allow_unsigned=true`.
+- **BREAKING:** default `webhooks.route_middleware` is now `['api', 'throttle:60,1']` (was `['api']`).
+- **BREAKING:** a new migration must be run on upgrade; the webhook endpoint returns `{"status":"duplicate"}` (HTTP 200) for replayed deliveries and no longer re-dispatches their events.
+
 ## [1.0.0] - 2026-05-02
 
 ### Added

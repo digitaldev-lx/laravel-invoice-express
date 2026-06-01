@@ -84,13 +84,21 @@ return [
     | signing_secret is used to verify the HMAC-SHA256 signature passed via
     | the X-InvoiceXpress-Signature header.
     |
+    | Security: verification is FAIL-CLOSED. If no signing_secret is set, the
+    | endpoint rejects every callback unless you explicitly set allow_unsigned
+    | to true (intended for local development only — never in production).
+    |
+    | The endpoint changes application state, so it ships throttled by default.
+    | Tighten the limit or add an IP allowlist via route_middleware as needed.
+    |
     */
 
     'webhooks' => [
         'enabled' => env('INVOICEEXPRESS_WEBHOOKS_ENABLED', true),
         'route_prefix' => env('INVOICEEXPRESS_WEBHOOKS_PREFIX', 'invoiceexpress/webhooks'),
-        'route_middleware' => ['api'],
+        'route_middleware' => ['api', 'throttle:60,1'],
         'signing_secret' => env('INVOICEEXPRESS_WEBHOOK_SECRET'),
+        'allow_unsigned' => env('INVOICEEXPRESS_WEBHOOKS_ALLOW_UNSIGNED', false),
         'log_payloads' => env('INVOICEEXPRESS_WEBHOOKS_LOG', true),
     ],
 

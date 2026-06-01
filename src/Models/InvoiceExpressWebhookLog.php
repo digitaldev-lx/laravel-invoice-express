@@ -12,6 +12,7 @@ use Illuminate\Support\Carbon;
  * @property string $event
  * @property int|null $document_id
  * @property string|null $document_type
+ * @property string|null $dedup_key
  * @property array<string, mixed> $payload
  * @property Carbon|null $received_at
  * @property Carbon|null $processed_at

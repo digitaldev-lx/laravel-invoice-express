@@ -635,13 +635,15 @@ INVOICEEXPRESS_WEBHOOK_SECRET=whsec_a_long_random_string
 INVOICEEXPRESS_WEBHOOKS_LOG=true
 ```
 
-The route becomes `POST https://your.app/invoiceexpress/webhooks` (the route name is `invoiceexpress.webhooks.handle`). Default middleware is `['api']`; override via `config('invoiceexpress.webhooks.route_middleware')`.
+The route becomes `POST https://your.app/invoiceexpress/webhooks` (the route name is `invoiceexpress.webhooks.handle`). Default middleware is `['api', 'throttle:60,1']` (the endpoint changes state, so it ships rate-limited); override via `config('invoiceexpress.webhooks.route_middleware')` — e.g. to tighten the throttle or prepend an IP allowlist for the InvoiceXpress source ranges.
 
 ### 2. Sign the payload
 
 Either configure InvoiceXpress to send `X-InvoiceXpress-Signature: <hmac>` (where `<hmac>` is the hex-encoded HMAC-SHA256 of the raw body keyed with your secret), or place a reverse proxy that adds the signature for you.
 
-If `INVOICEEXPRESS_WEBHOOK_SECRET` is unset, signature verification is skipped (a warning is logged) — useful for local dev with `expose`/`ngrok`.
+**Verification is fail-closed.** If `INVOICEEXPRESS_WEBHOOK_SECRET` is unset, every callback is **rejected** (an error is logged) — the endpoint never grants blanket trust. For local development behind a tunnel (`expose`/`ngrok`) where you cannot sign, opt in explicitly with `INVOICEEXPRESS_WEBHOOKS_ALLOW_UNSIGNED=true`. **Never enable `allow_unsigned` in production** — without it, an unauthenticated request could forge `document.paid`/`document.canceled` events.
+
+Webhook delivery is idempotent: a replayed callback (identical raw body) is recorded once and dispatched once, deduplicated via a unique `dedup_key` on `invoice_express_webhook_logs`.
 
 ### 3. React to events
 
@@ -951,8 +953,9 @@ The published `config/invoiceexpress.php` exposes:
 | `log_channel` | string | `stack` | Laravel log channel for request logs |
 | `webhooks.enabled` | bool | `true` | Register the webhook route |
 | `webhooks.route_prefix` | string | `invoiceexpress/webhooks` | Path prefix |
-| `webhooks.route_middleware` | array | `['api']` | Middleware applied to the route |
+| `webhooks.route_middleware` | array | `['api', 'throttle:60,1']` | Middleware applied to the route |
 | `webhooks.signing_secret` | string\|null | env | Shared secret for HMAC-SHA256 verification |
+| `webhooks.allow_unsigned` | bool | `false` | Accept callbacks when no secret is set (local dev only — **never in production**) |
 | `webhooks.log_payloads` | bool | `true` | Persist every payload to `invoice_express_webhook_logs` |
 | `persistence.enabled` | bool | `false` | Reserved for future two-layer Eloquent sync |
 | `persistence.tables.*` | array<string,string> | (defaults) | Override table names if you have collisions |
@@ -967,7 +970,7 @@ The published `config/invoiceexpress.php` exposes:
 
 **`ValidationException` on create** — call `$e->getFieldErrors()` to list the offending fields. The most common culprits are missing `client.name`/`client.fiscal_id` and unknown `tax_exemption` codes (use the `VatExemptionCode` enum).
 
-**Webhook returns 500 with "Invalid InvoiceXpress webhook signature"** — the signing secret on your side does not match what InvoiceXpress (or your reverse proxy) signs with. Set `INVOICEEXPRESS_WEBHOOK_SECRET` to an empty value temporarily to bypass verification while you investigate.
+**Webhook returns 500 with "Invalid InvoiceXpress webhook signature"** — the signing secret on your side does not match what InvoiceXpress (or your reverse proxy) signs with. Compare `INVOICEEXPRESS_WEBHOOK_SECRET` against the value configured on the sender. Do **not** blank the secret in production to "bypass" verification — that would accept forged callbacks. If you must run unsigned in **local** development, set `INVOICEEXPRESS_WEBHOOKS_ALLOW_UNSIGNED=true` instead.
 
 **Tests can't load `invoice_express_webhook_logs`** — the package migration ships under `database/migrations`. In Orchestra Testbench, call `loadMigrationsFrom(__DIR__.'/../database/migrations')` from your test case (the package's own `TestCase` does this).
 

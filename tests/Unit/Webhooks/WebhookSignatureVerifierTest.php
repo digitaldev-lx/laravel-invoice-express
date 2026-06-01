@@ -34,8 +34,20 @@ it('rejects an empty signature when a secret is configured', function (): void {
     expect($verifier->verify('body', null))->toBeFalse();
 });
 
-it('skips verification when no secret is configured', function (): void {
+it('rejects verification when no secret is configured (fail-closed)', function (): void {
     config()->set('invoiceexpress.webhooks.signing_secret', null);
+    config()->set('invoiceexpress.webhooks.allow_unsigned', false);
+
+    /** @var WebhookSignatureVerifier $verifier */
+    $verifier = app(WebhookSignatureVerifier::class);
+
+    expect($verifier->verify('body', null))->toBeFalse();
+    expect($verifier->verify('body', 'anything'))->toBeFalse();
+});
+
+it('allows unsigned webhooks only when allow_unsigned is explicitly enabled', function (): void {
+    config()->set('invoiceexpress.webhooks.signing_secret', null);
+    config()->set('invoiceexpress.webhooks.allow_unsigned', true);
 
     /** @var WebhookSignatureVerifier $verifier */
     $verifier = app(WebhookSignatureVerifier::class);
