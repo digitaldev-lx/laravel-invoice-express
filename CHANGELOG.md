@@ -5,6 +5,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-06-01
+
+Follow-up security hardening from the audit. No breaking changes.
+
+### Security
+- **`WebhookSignatureFailed` no longer propagates the unbounded raw body.** The raw body is truncated to `MAX_BODY_PREVIEW_BYTES` (2048) and the full body's SHA-256 hash and length are exposed via new `bodyHash` / `bodyLength` properties — this bounds how much attacker-controlled data can flow into a consumer's logs/queues if a listener persists the event.
+- **Opt-in encryption at rest for webhook payloads** via `webhooks.encrypt_payloads` (default `false`). Webhook payloads carry personal data (names, emails, NIF, addresses).
+- **Upstream response bodies embedded in client exception messages are now truncated** to 500 characters, reducing information disclosure when `APP_DEBUG` is enabled.
+- **Dependencies verified** — the test suite and `composer audit` run clean against the latest Laravel 13.x / Symfony releases. The package does not commit `composer.lock` (consumers resolve their own versions), so no vulnerable versions were ever pinned downstream.
+
+### Added
+- `invoiceexpress:prune-webhook-logs` command and `webhooks.prune_after_days` config (default `90`) for GDPR data-retention pruning of the webhook log table.
+- `webhooks.encrypt_payloads` config flag.
+- `WebhookSignatureFailed::for()` factory plus `bodyHash` and `bodyLength` properties on the event.
+
+### Changed
+- `InvoiceExpressWebhookLog` now declares an explicit `$fillable` whitelist instead of `$guarded = []`.
+
+### Fixed
+- `Client::$preferredContactName` was typed `?float`, coercing every contact name to `0.0`. It is now correctly typed `?string`.
+
 ## [2.0.0] - 2026-06-01
 
 Security hardening of the webhook receiver. Contains breaking changes — see [UPGRADE.md](UPGRADE.md).

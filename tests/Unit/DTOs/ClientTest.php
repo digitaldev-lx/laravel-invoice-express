@@ -51,6 +51,16 @@ it('hydrates from a remote response', function (): void {
     expect($client->discount)->toBe(5.0);
 });
 
+it('keeps preferred_contact_name as a string', function (): void {
+    $client = Client::fromArray([
+        'name' => 'Acme',
+        'preferred_contact_name' => 'Mr. Silva',
+    ]);
+
+    expect($client->preferredContactName)->toBe('Mr. Silva');
+    expect($client->toArray()['preferred_contact_name'])->toBe('Mr. Silva');
+});
+
 it('falls back to raw strings for unknown enum values', function (): void {
     $client = Client::fromArray([
         'name' => 'X',

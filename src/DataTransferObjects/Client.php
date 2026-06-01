@@ -25,7 +25,7 @@ final readonly class Client implements DataTransferObject
         public Language|string|null $language = null,
         public ?string $observations = null,
         public ?string $sendOptions = null,
-        public ?float $preferredContactName = null,
+        public ?string $preferredContactName = null,
         public ?float $discount = null,
     ) {}
 
@@ -85,7 +85,7 @@ final readonly class Client implements DataTransferObject
             language: $language,
             observations: isset($data['observations']) && is_string($data['observations']) ? $data['observations'] : null,
             sendOptions: isset($data['send_options']) && is_string($data['send_options']) ? $data['send_options'] : null,
-            preferredContactName: isset($data['preferred_contact_name']) ? (float) $data['preferred_contact_name'] : null,
+            preferredContactName: isset($data['preferred_contact_name']) && is_string($data['preferred_contact_name']) ? $data['preferred_contact_name'] : null,
             discount: isset($data['discount']) ? (float) $data['discount'] : null,
         );
     }

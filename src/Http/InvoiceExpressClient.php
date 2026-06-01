@@ -17,6 +17,7 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -219,21 +220,21 @@ final class InvoiceExpressClient
 
         if ($status === 400) {
             throw new BadRequestException(
-                "InvoiceXpress bad request on {$endpoint}: ".$response->body(),
+                "InvoiceXpress bad request on {$endpoint}: ".$this->bodySnippet($response),
                 code: 400,
             );
         }
 
         if ($status >= 500) {
             throw new ServerException(
-                "InvoiceXpress server error on {$endpoint} (HTTP {$status}): ".$response->body(),
+                "InvoiceXpress server error on {$endpoint} (HTTP {$status}): ".$this->bodySnippet($response),
                 code: $status,
             );
         }
 
         if ($response->failed()) {
             throw new InvoiceExpressException(
-                "InvoiceXpress error on {$endpoint} (HTTP {$status}): ".$response->body(),
+                "InvoiceXpress error on {$endpoint} (HTTP {$status}): ".$this->bodySnippet($response),
                 code: $status,
             );
         }
@@ -243,5 +244,15 @@ final class InvoiceExpressClient
         }
 
         return (array) ($response->json() ?? []);
+    }
+
+    /**
+     * Bounded slice of an upstream response body for use in exception
+     * messages — avoids dumping large/sensitive upstream payloads into logs
+     * or error pages when APP_DEBUG is on.
+     */
+    private function bodySnippet(Response $response): string
+    {
+        return Str::limit($response->body(), 500);
     }
 }

@@ -29,7 +29,7 @@ final class WebhookController extends Controller
         $signatureString = is_string($signature) ? $signature : null;
 
         if (! $this->verifier->verify($rawBody, $signatureString)) {
-            WebhookSignatureFailed::dispatch($rawBody, $signatureString);
+            event(WebhookSignatureFailed::for($rawBody, $signatureString));
 
             throw new WebhookException('Invalid InvoiceXpress webhook signature.');
         }

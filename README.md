@@ -699,9 +699,21 @@ php artisan invoiceexpress:sync-sequences
 
 # Generate a SAF-T XML for a given period
 php artisan invoiceexpress:saft --year=2026 --month=4 --out=storage/saft.xml
+
+# Prune webhook logs older than the retention window (defaults to webhooks.prune_after_days)
+php artisan invoiceexpress:prune-webhook-logs --days=90
 ```
 
 All commands accept `--account=` and `--key=` for ad-hoc multi-account use.
+
+> **Heads-up:** passing `--key=` puts the API key on the command line, where it is visible in shell history and the process list (`ps`). Prefer `INVOICEEXPRESS_API_KEY` in the environment; reserve `--key=` for throwaway/interactive use.
+
+Schedule the pruning to keep webhook PII bounded (GDPR data minimisation):
+
+```php
+// routes/console.php
+Schedule::command('invoiceexpress:prune-webhook-logs')->daily();
+```
 
 ---
 
@@ -957,6 +969,8 @@ The published `config/invoiceexpress.php` exposes:
 | `webhooks.signing_secret` | string\|null | env | Shared secret for HMAC-SHA256 verification |
 | `webhooks.allow_unsigned` | bool | `false` | Accept callbacks when no secret is set (local dev only — **never in production**) |
 | `webhooks.log_payloads` | bool | `true` | Persist every payload to `invoice_express_webhook_logs` |
+| `webhooks.encrypt_payloads` | bool | `false` | Encrypt the stored `payload` column at rest (new rows only; requires a stable `APP_KEY`) |
+| `webhooks.prune_after_days` | int | `90` | Retention window used by `invoiceexpress:prune-webhook-logs` |
 | `persistence.enabled` | bool | `false` | Reserved for future two-layer Eloquent sync |
 | `persistence.tables.*` | array<string,string> | (defaults) | Override table names if you have collisions |
 

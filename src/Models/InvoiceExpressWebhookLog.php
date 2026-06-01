@@ -23,13 +23,15 @@ final class InvoiceExpressWebhookLog extends Model
 {
     public $timestamps = true;
 
-    protected $guarded = [];
-
-    /** @var array<string, string> */
-    protected $casts = [
-        'payload' => 'array',
-        'received_at' => 'datetime',
-        'processed_at' => 'datetime',
+    /** @var list<string> */
+    protected $fillable = [
+        'event',
+        'document_id',
+        'document_type',
+        'dedup_key',
+        'payload',
+        'received_at',
+        'processed_at',
     ];
 
     public function getTable(): string
@@ -39,5 +41,19 @@ final class InvoiceExpressWebhookLog extends Model
         return is_string($configured) && $configured !== ''
             ? $configured
             : 'invoice_express_webhook_logs';
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'payload' => (bool) config('invoiceexpress.webhooks.encrypt_payloads', false)
+                ? 'encrypted:array'
+                : 'array',
+            'received_at' => 'datetime',
+            'processed_at' => 'datetime',
+        ];
     }
 }

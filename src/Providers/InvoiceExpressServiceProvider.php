@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DigitaldevLx\LaravelInvoiceExpress\Providers;
 
 use DigitaldevLx\LaravelInvoiceExpress\Console\GenerateSaftCommand;
+use DigitaldevLx\LaravelInvoiceExpress\Console\PruneWebhookLogsCommand;
 use DigitaldevLx\LaravelInvoiceExpress\Console\SyncSequencesCommand;
 use DigitaldevLx\LaravelInvoiceExpress\Console\TestConnectionCommand;
 use DigitaldevLx\LaravelInvoiceExpress\Http\InvoiceExpressClient;
@@ -100,6 +101,7 @@ final class InvoiceExpressServiceProvider extends ServiceProvider
                 TestConnectionCommand::class,
                 SyncSequencesCommand::class,
                 GenerateSaftCommand::class,
+                PruneWebhookLogsCommand::class,
             ]);
         }
     }

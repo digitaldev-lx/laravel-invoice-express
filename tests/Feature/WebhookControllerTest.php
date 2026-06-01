@@ -11,6 +11,7 @@ use DigitaldevLx\LaravelInvoiceExpress\Events\WebhookReceived;
 use DigitaldevLx\LaravelInvoiceExpress\Events\WebhookSignatureFailed;
 use DigitaldevLx\LaravelInvoiceExpress\Models\InvoiceExpressWebhookLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 
 uses(RefreshDatabase::class);
@@ -175,4 +176,54 @@ it('protects the state-changing webhook route with throttle middleware', functio
 
     expect($route)->not->toBeNull();
     expect($route->gatherMiddleware())->toContain('throttle:60,1');
+});
+
+it('caps the raw body on the signature-failure event and exposes hash + length', function (): void {
+    Event::fake();
+
+    $big = str_repeat('x', 5000);
+
+    $response = $this->call(
+        'POST',
+        '/invoiceexpress/webhooks',
+        [],
+        [],
+        [],
+        ['CONTENT_TYPE' => 'application/json', 'HTTP_X_INVOICEXPRESS_SIGNATURE' => 'wrong'],
+        $big,
+    );
+
+    expect($response->getStatusCode())->toBeGreaterThanOrEqual(400);
+
+    Event::assertDispatched(
+        WebhookSignatureFailed::class,
+        static fn (WebhookSignatureFailed $e): bool => $e->bodyLength === 5000
+            && strlen($e->rawBody) === WebhookSignatureFailed::MAX_BODY_PREVIEW_BYTES
+            && $e->bodyHash === hash('sha256', $big),
+    );
+});
+
+it('encrypts the stored webhook payload when encrypt_payloads is enabled', function (): void {
+    config()->set('invoiceexpress.webhooks.encrypt_payloads', true);
+
+    $payload = [
+        'event' => WebhookEvent::DocumentCreated->value,
+        'document_id' => 7,
+        'document_type' => DocumentType::Invoice->value,
+        'payload' => ['client_email' => 'pii@example.pt'],
+    ];
+    $signed = signWebhookPayload($payload);
+
+    $this->postJson('/invoiceexpress/webhooks', $signed['body'], [
+        'X-InvoiceXpress-Signature' => $signed['header'],
+    ])->assertOk();
+
+    // At rest: the raw column is ciphertext, not the plaintext PII.
+    $raw = DB::table('invoice_express_webhook_logs')->value('payload');
+    expect($raw)->not->toContain('pii@example.pt');
+
+    // Through the model cast: transparently decrypted back to an array.
+    $log = InvoiceExpressWebhookLog::query()->first();
+    expect($log->payload)->toBeArray();
+    expect($log->payload['payload']['client_email'])->toBe('pii@example.pt');
 });

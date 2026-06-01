@@ -100,6 +100,15 @@ return [
         'signing_secret' => env('INVOICEEXPRESS_WEBHOOK_SECRET'),
         'allow_unsigned' => env('INVOICEEXPRESS_WEBHOOKS_ALLOW_UNSIGNED', false),
         'log_payloads' => env('INVOICEEXPRESS_WEBHOOKS_LOG', true),
+
+        // Webhook payloads carry personal data (names, emails, NIF, addresses).
+        // Set to true to store the `payload` column encrypted at rest. Applies
+        // to newly-written rows only — pre-existing plaintext rows will fail to
+        // decrypt, so prune them first. Requires a stable APP_KEY.
+        'encrypt_payloads' => env('INVOICEEXPRESS_WEBHOOKS_ENCRYPT', false),
+
+        // Retention window (days) used by `invoiceexpress:prune-webhook-logs`.
+        'prune_after_days' => env('INVOICEEXPRESS_WEBHOOKS_PRUNE_DAYS', 90),
     ],
 
     /*

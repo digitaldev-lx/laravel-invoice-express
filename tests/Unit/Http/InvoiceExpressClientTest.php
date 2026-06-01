@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use DigitaldevLx\LaravelInvoiceExpress\Exceptions\InvoiceExpressException;
 use DigitaldevLx\LaravelInvoiceExpress\Exceptions\RateLimitException;
+use DigitaldevLx\LaravelInvoiceExpress\Exceptions\ServerException;
 use DigitaldevLx\LaravelInvoiceExpress\Http\InvoiceExpressClient;
 use Illuminate\Support\Facades\Http;
 
@@ -56,6 +57,21 @@ it('returns a fresh client when switching accounts', function (): void {
     expect($base)->not->toBe($other);
     expect($base->accountName())->toBe('first');
     expect($other->accountName())->toBe('second');
+});
+
+it('truncates large upstream error bodies embedded in exception messages', function (): void {
+    Http::fake(['*' => Http::response(str_repeat('A', 5000), 500)]);
+
+    $client = new InvoiceExpressClient(accountName: 'co', apiKey: 'k', retryTimes: 0);
+
+    try {
+        $client->request('GET', 'clients.json');
+        $this->fail('Expected ServerException was not thrown.');
+    } catch (ServerException $e) {
+        expect(mb_strlen($e->getMessage()))->toBeLessThan(700);
+        expect($e->getMessage())->toContain('...');
+        expect(substr_count($e->getMessage(), 'A'))->toBeLessThanOrEqual(510);
+    }
 });
 
 it('throws RateLimitException locally before reaching the threshold', function (): void {

@@ -1,6 +1,26 @@
 # Upgrade Guide
 
-## Unreleased (security hardening of the webhook receiver)
+## 2.0.0 → 2.1.0
+
+No breaking changes. Two new **opt-in** security features worth enabling:
+
+- **Encrypt webhook payloads at rest.** Set `INVOICEEXPRESS_WEBHOOKS_ENCRYPT=true`
+  (or `webhooks.encrypt_payloads`). Applies to newly-written rows only — existing
+  plaintext rows must be pruned first, and a stable `APP_KEY` is required.
+- **Prune old webhook logs (GDPR).** Schedule
+  `php artisan invoiceexpress:prune-webhook-logs` (retention via
+  `webhooks.prune_after_days`, default 90).
+
+If you read `WebhookSignatureFailed::$rawBody` in a listener, note it is now
+truncated to 2048 bytes; use the new `$bodyHash` / `$bodyLength` for correlation.
+
+Re-publish the config to pick up the new keys if you keep a local copy:
+
+```bash
+php artisan vendor:publish --tag=invoiceexpress-config --force
+```
+
+## 1.0.0 → 2.0.0 (security hardening of the webhook receiver)
 
 This release closes three webhook-receiver security issues. Two introduce
 behaviour changes you must account for before deploying.
