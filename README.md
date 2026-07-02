@@ -927,6 +927,8 @@ All DTOs are `final readonly class` and implement a `toArray()` / `fromArray()` 
 
 All DTOs accept either typed enums or their raw string equivalents to keep the call sites flexible.
 
+> **Document `items` serialise as a plain JSON array.** The document DTOs (`Invoice`, `Estimate`, `Guide`, `PurchaseOrder`) emit their line `items` as a bare JSON array — the shape the InvoiceXpress V2 API requires. `fromArray()` is tolerant on the way back: it accepts both the plain array and the legacy `{ "item": [ … ] }` envelope that some responses still return.
+
 > **Monetary & decimal values are strings, not floats.** Amounts, unit prices, quantities, discounts and tax rates (`Payment::$amount`, `DocumentItem::$unitPrice`/`$quantity`/`$discount`, `Item::$unitPrice`/`$taxRate`, `Tax::$value`, `Account::$openingBalance`, `Client::$discount`, `TreasuryMovement::$amount`) are typed `string` to preserve exact decimals — passing them through PHP's `float` silently loses precision (`0.1 + 0.2`). Pass `'100.00'`, not `100.00`. Values read from the API are normalised to strings verbatim, so `'10.50'` round-trips unchanged.
 
 ---

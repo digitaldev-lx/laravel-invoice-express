@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-07-02
+
+### Fixed
+- **Document `items` are now serialised as a plain JSON array**, matching what the InvoiceXpress V2 API expects. Previously `Invoice`, `Estimate`, `Guide` and `PurchaseOrder` wrapped their line items in an `{ "item": [ … ] }` envelope, which the JSON API rejected with `422 — "Items element should be of type array"` — so no document could be created through the API. `toArray()` now emits `"items": [ … ]`; `fromArray()` stays tolerant, accepting both the plain array and the legacy `{ "item": [ … ] }` envelope some responses still return.
+
 ## [3.0.0] - 2026-06-01
 
 Decimal-integrity release. **Contains breaking changes** — see [UPGRADE.md](UPGRADE.md).

@@ -18,7 +18,9 @@ it('serialises a purchase order with line items and supplier', function (): void
     expect($payload['date'])->toBe('2026-05-01');
     expect($payload['delivery_date'])->toBe('2026-05-10');
     expect($payload['supplier'])->toBe(['name' => 'Vendor']);
-    expect($payload['items']['item'])->toHaveCount(1);
+    expect($payload['items'])->toBeArray();
+    expect(array_is_list($payload['items']))->toBeTrue();
+    expect($payload['items'])->toHaveCount(1);
 });
 
 it('hydrates a purchase order from a remote payload', function (): void {

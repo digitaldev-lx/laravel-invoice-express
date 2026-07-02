@@ -7,7 +7,7 @@ use DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects\Invoice;
 use DigitaldevLx\LaravelInvoiceExpress\DataTransferObjects\Tax;
 use DigitaldevLx\LaravelInvoiceExpress\Enums\DocumentType;
 
-it('wraps items inside the items->item envelope expected by the API', function (): void {
+it('serialises items as a plain JSON array as required by the API', function (): void {
     $invoice = new Invoice(
         type: DocumentType::Invoice,
         date: '2026-05-01',
@@ -28,9 +28,10 @@ it('wraps items inside the items->item envelope expected by the API', function (
 
     expect($payload['date'])->toBe('2026-05-01');
     expect($payload['due_date'])->toBe('2026-05-31');
-    expect($payload['items'])->toHaveKey('item');
-    expect($payload['items']['item'])->toHaveCount(2);
-    expect($payload['items']['item'][0]['name'])->toBe('Hora');
+    expect($payload['items'])->toBeArray();
+    expect(array_is_list($payload['items']))->toBeTrue();
+    expect($payload['items'])->toHaveCount(2);
+    expect($payload['items'][0]['name'])->toBe('Hora');
     expect($payload['client'])->toBe(['name' => 'Acme']);
 });
 
@@ -59,6 +60,19 @@ it('hydrates back including items', function (): void {
     ]);
 
     expect($invoice->type)->toBe(DocumentType::Invoice);
+    expect($invoice->items)->toHaveCount(1);
+    expect($invoice->items[0]->name)->toBe('Hora');
+});
+
+it('hydrates back from a plain items array', function (): void {
+    $invoice = Invoice::fromArray([
+        'type' => 'Invoice',
+        'date' => '2026-05-01',
+        'items' => [
+            ['name' => 'Hora', 'quantity' => '2', 'unit_price' => '50.0'],
+        ],
+    ]);
+
     expect($invoice->items)->toHaveCount(1);
     expect($invoice->items[0]->name)->toBe('Hora');
 });

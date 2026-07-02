@@ -17,7 +17,9 @@ it('serialises an estimate with its line items', function (): void {
     $payload = $estimate->toArray();
 
     expect($payload['date'])->toBe('2026-05-01');
-    expect($payload['items']['item'])->toHaveCount(1);
+    expect($payload['items'])->toBeArray();
+    expect(array_is_list($payload['items']))->toBeTrue();
+    expect($payload['items'])->toHaveCount(1);
 });
 
 it('hydrates from an API response', function (): void {

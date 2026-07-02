@@ -39,7 +39,7 @@ final readonly class PurchaseOrder implements DataTransferObject
             'manual_sequence_number' => $this->manualSequenceNumber,
             'items' => $this->items === null
                 ? null
-                : ['item' => array_map(static fn (DocumentItem $item): array => $item->toArray(), $this->items)],
+                : array_map(static fn (DocumentItem $item): array => $item->toArray(), $this->items),
             'supplier' => $this->supplier,
         ], static fn (mixed $value): bool => $value !== null);
 
@@ -56,11 +56,18 @@ final readonly class PurchaseOrder implements DataTransferObject
     public static function fromArray(array $data): static
     {
         $items = null;
-        if (isset($data['items']['item']) && is_array($data['items']['item'])) {
-            $items = array_map(
-                static fn (array $item): DocumentItem => DocumentItem::fromArray($item),
-                $data['items']['item'],
-            );
+        $rawItems = $data['items'] ?? null;
+        if (is_array($rawItems)) {
+            // Accept both the plain JSON array [ {...} ] the API now receives and the
+            // legacy { "item": [ {...} ] } envelope some responses may still return.
+            $list = array_is_list($rawItems) ? $rawItems : ($rawItems['item'] ?? null);
+
+            if (is_array($list)) {
+                $items = array_map(
+                    static fn (array $item): DocumentItem => DocumentItem::fromArray($item),
+                    $list,
+                );
+            }
         }
 
         return new self(
