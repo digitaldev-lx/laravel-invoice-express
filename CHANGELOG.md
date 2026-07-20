@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-07-20
+
+### Fixed
+
+Five document endpoints were built from the per-type resource root (`invoices/{id}/…`, `estimates/{id}/…`, …) but the InvoiceXpress API does not expose them there — every call returned `404`, even for documents that were issued and visible in the account. Verified against a live account.
+
+- **`pdfUrl()` / `pdf()`** (`GeneratesPdf`) — now hit `api/pdf/{id}.json`, a single, document-type agnostic endpoint. `pdf()` never returned bytes before; it silently returned an empty string.
+- **`qrCode()`** (`GetsQrCode`) — now hits `api/qr_codes/{id}.json`. The response envelope is `{ "qr_code": { "url": … } }` (the previous test asserted a fabricated `output.url` shape).
+- **`relatedDocuments()`** (`HandlesRelatedDocuments`) — now hits `document/{id}/related_documents.json` (literal singular `document`). The response envelope is `{ "documents": [ … ] }` (was asserted as `related_documents`).
+- **`payment()` / `cancelPayment()`** (`GeneratesPayment`) — partial payments live under the generic `documents/` resource, so these now target `documents/{id}/partial_payments.json` and `documents/{id}/partial_payments/{paymentId}/change-state.json`. Corrected from the API reference; not yet exercised against a live account (financial writes).
+
+The unit tests for all five mocked the wrong (non-existent) paths, so they passed against fabricated endpoints and hid the bug. They now assert the real paths and response shapes.
+
 ## [3.0.1] - 2026-07-02
 
 ### Fixed

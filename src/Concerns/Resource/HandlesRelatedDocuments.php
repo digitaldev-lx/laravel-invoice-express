@@ -11,11 +11,13 @@ trait HandlesRelatedDocuments
      */
     public function relatedDocuments(int $id): array
     {
-        $endpoint = sprintf('%s/{id}/related_documents.json', $this->endpointRoot());
-
+        // Endpoint is `document/{id}/related_documents.json` — literal singular
+        // `document`, not the resource root (`invoices`, `estimates`, …). Building
+        // it from endpointRoot() returns 404. Response envelope is
+        // `{ "documents": [ … ] }` (not `related_documents`).
         $result = $this->client->request(
             method: 'GET',
-            endpoint: $endpoint,
+            endpoint: 'document/{id}/related_documents.json',
             pathParameters: ['id' => $id],
         );
 

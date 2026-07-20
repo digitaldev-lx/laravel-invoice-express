@@ -17,12 +17,15 @@ trait GeneratesPdf
     {
         $params = $secondCopy ? ['second_copy' => 'true'] : [];
 
-        $endpoint = sprintf('%s/%d/pdf.json', $this->endpointRoot(), $id);
-
+        // The PDF endpoint is a single, document-type agnostic path — unlike the
+        // rest of the API it does NOT follow `{root}/{id}/...`. Building it from
+        // endpointRoot() (invoices/{id}/pdf.json, receipts/{id}/pdf.json, …) hits a
+        // path that does not exist: the API returns 404 even for issued documents.
         $result = $this->client->request(
             method: 'GET',
-            endpoint: $endpoint,
+            endpoint: 'api/pdf/{id}.json',
             params: $params,
+            pathParameters: ['id' => $id],
         );
 
         return is_array($result) ? $result : [];

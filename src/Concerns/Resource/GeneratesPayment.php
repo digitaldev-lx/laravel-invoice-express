@@ -17,7 +17,12 @@ trait GeneratesPayment
      */
     public function payment(int $id, Payment $payment): array
     {
-        $endpoint = sprintf('%s/{id}/partial_payments.json', $this->endpointRoot());
+        // Partial payments live under the generic `documents/` resource, not the
+        // per-type root — `invoices/{id}/partial_payments.json` returns 404. See
+        // the InvoiceXpress V2 partial-payments API. NOTE: unlike the PDF/QR/
+        // related-documents fixes, this path is corrected from the API reference
+        // and not yet exercised against a live account (it is a financial write).
+        $endpoint = 'documents/{id}/partial_payments.json';
 
         $params = ['partial_payment' => $payment->toArray()];
 
@@ -42,7 +47,8 @@ trait GeneratesPayment
      */
     public function cancelPayment(int $id, int $paymentId, ?string $note = null): array
     {
-        $endpoint = sprintf('%s/{id}/partial_payments/{paymentId}/change-state.json', $this->endpointRoot());
+        // Same generic `documents/` resource as payment() — see the note there.
+        $endpoint = 'documents/{id}/partial_payments/{paymentId}/change-state.json';
 
         $params = [
             'partial_payment' => array_filter([

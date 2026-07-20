@@ -11,11 +11,12 @@ trait GetsQrCode
      */
     public function qrCode(int $id): array
     {
-        $endpoint = sprintf('%s/{id}/qr_code.json', $this->endpointRoot());
-
+        // Like the PDF endpoint, the QR code lives at a single, document-type
+        // agnostic path — not `{root}/{id}/qr_code.json`, which returns 404.
+        // The response envelope is `{ "qr_code": { "url": ... } }`.
         $result = $this->client->request(
             method: 'GET',
-            endpoint: $endpoint,
+            endpoint: 'api/qr_codes/{id}.json',
             pathParameters: ['id' => $id],
         );
 
