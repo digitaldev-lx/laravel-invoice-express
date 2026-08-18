@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-08-19
+
+VAT-exempt documents could not be issued, and the error that said so was unreadable. Both fixes verified against a live account.
+
+### Fixed
+
+- **No document with exempt lines could be created.** `DocumentItem::toArray()` serialised the exemption reason as `exemption_code` nested inside `tax`. The API ignores it there and then rejects the document with `422 — "Razão de isenção deve ter uma opção selecionada"`, even when the code is also set at document level — it must travel as `tax_exemption` on the line itself. `toArray()` now hoists it out of the nested `tax`; `fromArray()` reads either placement, so round-trips are unaffected. **No call-site change needed**: keep passing `exemptionCode` to the `Tax` DTO.
+- **Validation errors came back empty.** InvoiceXpress reports failures from the document write endpoints as an unkeyed list — `{ "errors": [ { "error": "…" } ] }` — but `ValidationException::fromResponse()` only understood the keyed `{ "errors": { "field": [ … ] } }` shape. Every 422 surfaced as a bare `InvoiceXpress validation error` with an empty `$errors` array and no way to tell what was wrong. All four observed shapes are now parsed.
+
+### Added
+
+- **`ValidationException::$messages`** — every human-readable message, whatever shape the API used. `$errors` is unchanged for the keyed shapes and empty for the unkeyed ones, so read `$messages` (or `getMessage()`, which now quotes them) when you just want to know what failed. `getFieldErrors()`, `hasFieldError()` and `getFirstError()` are untouched.
+
 ## [3.1.0] - 2026-07-20
 
 ### Fixed
