@@ -64,7 +64,7 @@ class PurchaseOrders extends Document
         /** @var array<string, mixed> $unwrappedArray */
         $unwrappedArray = is_array($unwrapped) ? $unwrapped : [];
 
-        DocumentCreated::dispatch($unwrappedArray, DocumentType::PurchaseOrder);
+        DocumentCreated::dispatch($unwrappedArray, DocumentType::PurchaseOrder, $this->client->accountName());
 
         return $unwrappedArray;
     }

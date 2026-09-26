@@ -52,6 +52,7 @@ final class InvoiceExpressServiceProvider extends ServiceProvider
                 rateLimitPerMinute: (int) $config->get('invoiceexpress.rate_limit', 780),
                 cache: $cache,
                 logger: $logger,
+                retryWrites: (bool) $config->get('invoiceexpress.retry.writes', false),
             );
         });
 

@@ -35,7 +35,7 @@ trait GeneratesPayment
 
         $data = is_array($result) ? $result : [];
 
-        PaymentReceived::dispatch($data, $this->documentType(), $id, $payment);
+        PaymentReceived::dispatch($data, $this->documentType(), $id, $payment, $this->client->accountName());
 
         return $data;
     }
@@ -66,7 +66,7 @@ trait GeneratesPayment
 
         $data = is_array($result) ? $result : [];
 
-        PaymentCanceled::dispatch($data, $this->documentType(), $id, $paymentId);
+        PaymentCanceled::dispatch($data, $this->documentType(), $id, $paymentId, $this->client->accountName());
 
         return $data;
     }

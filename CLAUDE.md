@@ -33,7 +33,7 @@ vendor/bin/pint --test   # check only
 `InvoiceExpress` (manager) -> `Resource` subclass -> `InvoiceExpressClient` -> InvoiceXpress REST API
 
 - **`InvoiceExpress`** (`src/InvoiceExpress.php`) - Main entry point, registered as singleton. Lazily resolves and caches Resource instances. Accessed via the `InvoiceExpress` facade.
-- **`InvoiceExpressClient`** (`src/Http/InvoiceExpressClient.php`) - Stateless HTTP client. Builds URL `https://{accountName}.app.invoicexpress.com/{endpoint}.json?api_key={key}`. Handles GET/POST/PUT/DELETE, retry with exponential backoff for 429/5xx, and throws granular exceptions on errors. `useAccount(name, key)` returns a clone for runtime multi-account.
+- **`InvoiceExpressClient`** (`src/Http/InvoiceExpressClient.php`) - Stateless HTTP client. Builds URL `https://{accountName}.app.invoicexpress.com/{endpoint}.json?api_key={key}`. Handles GET/POST/PUT/DELETE, retry with exponential backoff (5xx/connection errors only for GET/HEAD unless `retry.writes`; 429 for all), api_key scrubbing on transport errors, and throws granular exceptions on errors. `useAccount(name, key)` returns a clone for runtime multi-account.
 - **`Resource`** (`src/Resources/Resource.php`) - Abstract base. Subclasses use `#[InvoiceExpressEndpoint(method, path, binary, rootKey)]` PHP attributes on methods to declare API endpoints. The `call()` method reads the attribute via reflection and delegates to `InvoiceExpressClient::request()`.
 
 ### Key Patterns

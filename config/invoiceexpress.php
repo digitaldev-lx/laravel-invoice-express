@@ -44,12 +44,21 @@ return [
     | Number of retries and base backoff (milliseconds) when InvoiceXpress
     | responds with 429 or 5xx. Backoff is exponential.
     |
+    | Connection errors and 5xx are retried ONLY for idempotent requests
+    | (GET/HEAD). A POST/PUT that timed out or returned 5xx may already have
+    | been committed upstream, so repeating it could issue a duplicate fiscal
+    | document. 429 is retried for every method (the request was not executed).
+    | Set `writes` to true to also retry POST/PUT/DELETE on 5xx/timeouts (the
+    | behaviour of versions before 3.3.0) — only if you add your own
+    | idempotency guard.
+    |
     */
 
     'retry' => [
         'times' => env('INVOICEEXPRESS_RETRY_TIMES', 3),
         'backoff_ms' => env('INVOICEEXPRESS_RETRY_BACKOFF_MS', 1000),
         'on_status' => [429, 500, 502, 503, 504],
+        'writes' => env('INVOICEEXPRESS_RETRY_WRITES', false),
     ],
 
     /*

@@ -1,5 +1,42 @@
 # Upgrade Guide
 
+## 3.2.x → 3.3.0 (safer retries, typed PDF/connection errors)
+
+No signature breaks: every new parameter is optional and trailing.
+
+**Behaviour change — writes are no longer retried on 5xx/timeouts.** Before, a
+`POST`/`PUT`/`DELETE` that timed out or got a 5xx was repeated up to
+`retry.times`, which can create a duplicate fiscal document when the first
+attempt had in fact succeeded. Now only `GET`/`HEAD` are retried on those
+failures (`429` is still retried for all methods). What to do:
+
+- Nothing, if you want the safe default. A failed write now surfaces as
+  `ServerException` / `ConnectionFailedException`; check with `find()`/`all()`
+  whether the document exists before retrying it yourself.
+- To keep the old behaviour, set `INVOICEEXPRESS_RETRY_WRITES=true` (or
+  `'retry' => ['writes' => true]` in a published config). Re-publish or add the
+  key by hand; `mergeConfigFrom` supplies the default `false` otherwise.
+
+**`pdf()` now throws.** A failed download raises `PdfDownloadException`
+(a subclass of `InvoiceExpressException`) instead of returning `''`. A missing
+PDF URL in the API envelope still returns `''`.
+
+**Connection errors are `ConnectionFailedException`** (still an
+`InvoiceExpressException`, so existing `catch` blocks keep working). The
+`previous` exception is no longer Guzzle's `ConnectionException`; code that
+inspected it must catch the package exception instead.
+
+**Credit notes, debit notes, invoice-receipts, simplified invoices:** pass the
+type to state changes, otherwise they are sent to `invoices/`:
+
+```php
+InvoiceExpress::invoices()->finalize($id, null, DocumentType::CreditNote);
+InvoiceExpress::invoices()->cancel($id, 'Erro de emissao', DocumentType::InvoiceReceipt);
+```
+
+**Multi-tenant listeners:** lifecycle events expose `$event->accountName`.
+
+
 ## 2.1.0 → 3.0.0 (decimal integrity)
 
 **Breaking:** monetary and decimal DTO fields changed from `float` to `string` so

@@ -77,7 +77,7 @@ class Invoices extends Document
         /** @var array<string, mixed> $unwrappedArray */
         $unwrappedArray = is_array($unwrapped) ? $unwrapped : [];
 
-        DocumentCreated::dispatch($unwrappedArray, $effectiveType);
+        DocumentCreated::dispatch($unwrappedArray, $effectiveType, $this->client->accountName());
 
         return $unwrappedArray;
     }

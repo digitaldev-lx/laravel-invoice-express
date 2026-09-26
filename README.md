@@ -493,7 +493,14 @@ InvoiceExpress::invoices()->settle($id, 'Pago via TB');
 
 // Or the generic API
 InvoiceExpress::invoices()->changeState($id, DocumentState::Final);
+
+// Credit notes, debit notes, invoice-receipts and simplified invoices live under
+// their own root — pass the type (default: plain invoices)
+InvoiceExpress::invoices()->finalize($id, null, DocumentType::CreditNote);
+InvoiceExpress::invoices()->cancel($id, 'Erro de emissao', DocumentType::InvoiceReceipt);
 ```
+
+`changeState` is documented by InvoiceXpress for `invoices`, `simplified_invoices`, `invoice_receipts`, `credit_notes` and `debit_notes`. Other types fall back to their own root and are unconfirmed.
 
 Each transition dispatches a typed event:
 
@@ -530,7 +537,7 @@ file_put_contents(storage_path('invoice.pdf'), $pdfBytes);
 $pdfBytes = InvoiceExpress::invoices()->pdf($id, secondCopy: true);
 ```
 
-`pdf()` dispatches a `PdfGenerated` event with the document type, id and byte size.
+`pdf()` downloads through the package HTTP client (honours `timeout`) and throws `PdfDownloadException` on failure. It dispatches a `PdfGenerated` event with the document type, id and byte size.
 
 ---
 
@@ -788,6 +795,16 @@ Subscribe in your `EventServiceProvider` (or rely on event auto-discovery in Lar
 
 Each event is a `final readonly` class; properties are public and immutable.
 
+Lifecycle events raised by API calls (`DocumentCreated`, `DocumentFinalized`, `DocumentPaid`, `DocumentCanceled`, `DocumentDeleted`, `EmailSent`, `PaymentReceived`, `PaymentCanceled`, `PdfGenerated`) expose `?string $accountName` — the account the call ran against, including `useAccount()` — so a multi-tenant listener can filter by tenant:
+
+```php
+Event::listen(DocumentFinalized::class, function (DocumentFinalized $e): void {
+    $tenant = Tenant::whereInvoiceExpressAccount($e->accountName)->first();
+});
+```
+
+It is `null` for events raised by incoming webhooks (the payload does not identify the account).
+
 ---
 
 ## Exceptions and error handling
@@ -803,6 +820,8 @@ RuntimeException
     ├── NotFoundException                   (HTTP 404 — exposes resource + id)
     ├── RateLimitException                  (HTTP 429 — exposes retryAfter)
     ├── ServerException                     (HTTP 5xx)
+    ├── ConnectionFailedException           (DNS/connect/timeout — api_key scrubbed)
+    ├── PdfDownloadException                (temporary PDF link could not be downloaded)
     ├── UnknownEndpointException            (developer error: missing attribute)
     └── WebhookException                    (invalid signature / malformed payload)
 ```
@@ -830,12 +849,20 @@ try {
 
 InvoiceXpress allows **780 requests per minute per account**.
 
-The HTTP client retries `429`/`5xx`/connection failures using `Http::retry()` with exponential backoff (1s → 2s → 4s by default). Knobs:
+The HTTP client retries using `Http::retry()` with exponential backoff (1s → 2s → 4s by default):
+
+- `GET`/`HEAD`: retried on `429`, `5xx` and connection failures.
+- `POST`/`PUT`/`DELETE`: retried **only on `429`** (the request was rejected). A write that timed out or returned `5xx` may already have been committed, and repeating it could issue a duplicate fiscal document, so it is not retried (since 3.3.0).
+
+Knobs:
 
 ```env
 INVOICEEXPRESS_RETRY_TIMES=3        # 0 disables retry
 INVOICEEXPRESS_RETRY_BACKOFF_MS=1000
+INVOICEEXPRESS_RETRY_WRITES=false   # true = also retry POST/PUT/DELETE on 5xx/timeouts (pre-3.3 behaviour; only with your own idempotency guard)
 ```
+
+Transport errors surface as `ConnectionFailedException`. Because the API key travels in the query string, its message and `previous` exception are scrubbed of the key.
 
 If you set `INVOICEEXPRESS_CACHE=redis` (or any cache store), the client also throttles **preventively**: it raises `RateLimitException` locally once 95% of the per-minute quota is reached, so queued jobs back off cleanly before InvoiceXpress 429s you.
 
@@ -963,6 +990,7 @@ The published `config/invoiceexpress.php` exposes:
 | `retry.times` | int | `3` | Retry attempts on 429/5xx (`0` disables) |
 | `retry.backoff_ms` | int | `1000` | Base backoff in ms (exponential thereafter) |
 | `retry.on_status` | int[] | `[429,500,502,503,504]` | Status codes to retry |
+| `retry.writes` | bool | `false` | Also retry `POST`/`PUT`/`DELETE` on 5xx/timeouts (can duplicate documents) |
 | `rate_limit` | int | `780` | Per-account/minute quota used by the preventive throttler |
 | `cache_store` | string\|null | env | Cache store for the throttler (omit to disable) |
 | `log_requests` | bool | `false` | Log every request at debug level |

@@ -17,5 +17,6 @@ final readonly class DocumentCreated
     public function __construct(
         public array $data,
         public DocumentType $type,
+        public ?string $accountName = null,
     ) {}
 }

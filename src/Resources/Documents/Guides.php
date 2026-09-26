@@ -88,7 +88,7 @@ class Guides extends Document
             GuideType::Global => DocumentType::GlobalGuide,
         };
 
-        DocumentCreated::dispatch($unwrappedArray, $documentType);
+        DocumentCreated::dispatch($unwrappedArray, $documentType, $this->client->accountName());
 
         return $unwrappedArray;
     }

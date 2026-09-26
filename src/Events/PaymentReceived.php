@@ -20,5 +20,6 @@ final readonly class PaymentReceived
         public DocumentType $type,
         public int $documentId,
         public Payment $payment,
+        public ?string $accountName = null,
     ) {}
 }

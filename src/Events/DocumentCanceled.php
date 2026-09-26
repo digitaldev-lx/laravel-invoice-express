@@ -19,5 +19,6 @@ final readonly class DocumentCanceled
         public DocumentType $type,
         public int $documentId,
         public ?string $reason = null,
+        public ?string $accountName = null,
     ) {}
 }

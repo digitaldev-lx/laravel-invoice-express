@@ -86,7 +86,7 @@ class Estimates extends Document
             EstimateType::Estimate => DocumentType::Estimate,
         };
 
-        DocumentCreated::dispatch($unwrappedArray, $documentType);
+        DocumentCreated::dispatch($unwrappedArray, $documentType, $this->client->accountName());
 
         return $unwrappedArray;
     }

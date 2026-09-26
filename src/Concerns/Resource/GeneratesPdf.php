@@ -33,6 +33,8 @@ trait GeneratesPdf
 
     /**
      * Download the raw PDF binary for this document.
+     *
+     * Uses the configured timeout; throws PdfDownloadException on failure.
      */
     public function pdf(int $id, bool $secondCopy = false): string
     {
@@ -49,9 +51,9 @@ trait GeneratesPdf
             return '';
         }
 
-        $bytes = (string) file_get_contents($url);
+        $bytes = $this->client->download($url);
 
-        PdfGenerated::dispatch($this->documentType(), $id, strlen($bytes));
+        PdfGenerated::dispatch($this->documentType(), $id, strlen($bytes), $this->client->accountName());
 
         return $bytes;
     }

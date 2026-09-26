@@ -18,5 +18,6 @@ final readonly class DocumentFinalized
         public array $data,
         public DocumentType $type,
         public int $documentId,
+        public ?string $accountName = null,
     ) {}
 }

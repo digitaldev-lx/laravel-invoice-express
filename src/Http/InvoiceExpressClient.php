@@ -6,8 +6,10 @@ namespace DigitaldevLx\LaravelInvoiceExpress\Http;
 
 use DigitaldevLx\LaravelInvoiceExpress\Exceptions\AuthenticationException;
 use DigitaldevLx\LaravelInvoiceExpress\Exceptions\BadRequestException;
+use DigitaldevLx\LaravelInvoiceExpress\Exceptions\ConnectionFailedException;
 use DigitaldevLx\LaravelInvoiceExpress\Exceptions\InvoiceExpressException;
 use DigitaldevLx\LaravelInvoiceExpress\Exceptions\NotFoundException;
+use DigitaldevLx\LaravelInvoiceExpress\Exceptions\PdfDownloadException;
 use DigitaldevLx\LaravelInvoiceExpress\Exceptions\RateLimitException;
 use DigitaldevLx\LaravelInvoiceExpress\Exceptions\ServerException;
 use DigitaldevLx\LaravelInvoiceExpress\Exceptions\ValidationException;
@@ -19,6 +21,7 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Throwable;
 
 final class InvoiceExpressClient
@@ -34,6 +37,7 @@ final class InvoiceExpressClient
         private readonly int $rateLimitPerMinute = 780,
         private readonly ?CacheRepository $cache = null,
         private readonly ?LoggerInterface $logger = null,
+        private readonly bool $retryWrites = false,
     ) {}
 
     public function accountName(): string
@@ -60,7 +64,7 @@ final class InvoiceExpressClient
         $resolvedEndpoint = $this->buildEndpoint($endpoint, $pathParameters);
         $upperMethod = strtoupper($method);
 
-        $request = $this->httpClient();
+        $request = $this->httpClient($upperMethod);
 
         try {
             $response = match ($upperMethod) {
@@ -70,12 +74,10 @@ final class InvoiceExpressClient
                 'DELETE' => $request->delete($resolvedEndpoint, $params),
                 default => throw new InvoiceExpressException("Unsupported HTTP method: {$method}"),
             };
-        } catch (ConnectionException $e) {
-            throw new InvoiceExpressException(
-                "InvoiceXpress connection error on {$resolvedEndpoint}: ".$e->getMessage(),
-                code: 0,
-                previous: $e,
-            );
+        } catch (InvoiceExpressException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            throw $this->sanitizedFailure($e, $resolvedEndpoint);
         }
 
         $this->logger?->debug('InvoiceXpress request', [
@@ -98,10 +100,61 @@ final class InvoiceExpressClient
             rateLimitPerMinute: $this->rateLimitPerMinute,
             cache: $this->cache,
             logger: $this->logger,
+            retryWrites: $this->retryWrites,
         );
     }
 
-    private function httpClient(): PendingRequest
+    /**
+     * Download a PDF from the (temporary, absolute) URL returned by the
+     * `api/pdf/{id}.json` endpoint, honouring the configured timeout.
+     *
+     * The URL is never included in exception messages: it is a bearer link.
+     *
+     * @throws PdfDownloadException
+     */
+    public function download(string $url): string
+    {
+        if (! preg_match('#^https?://#i', $url)) {
+            throw new PdfDownloadException('InvoiceXpress returned an invalid PDF URL.');
+        }
+
+        $this->throttle();
+
+        try {
+            $request = Http::timeout($this->timeout);
+
+            if ($this->retryTimes > 0) {
+                $backoff = $this->retryBackoffMs;
+                $request = $request->retry(
+                    times: $this->retryTimes,
+                    sleepMilliseconds: static fn (int $attempt): int => $backoff * (2 ** ($attempt - 1)),
+                    when: static fn (Throwable $e): bool => $e instanceof ConnectionException,
+                    throw: false,
+                );
+            }
+
+            $response = $request->get($url);
+        } catch (Throwable $e) {
+            $reason = $e instanceof ConnectionException ? 'connection error or timeout' : $e::class;
+
+            throw new PdfDownloadException(
+                'InvoiceXpress PDF download failed ('.$reason.').',
+                code: 0,
+                previous: new RuntimeException('PDF download failed (details withheld).'),
+            );
+        }
+
+        if ($response->failed()) {
+            throw new PdfDownloadException(
+                'InvoiceXpress PDF download failed (HTTP '.$response->status().').',
+                code: $response->status(),
+            );
+        }
+
+        return $response->body();
+    }
+
+    private function httpClient(string $method = 'GET'): PendingRequest
     {
         $request = Http::baseUrl(sprintf(self::BASE_URL_TEMPLATE, $this->accountName))
             ->withHeaders([
@@ -117,7 +170,7 @@ final class InvoiceExpressClient
             $request = $request->retry(
                 times: $this->retryTimes,
                 sleepMilliseconds: static fn (int $attempt): int => $backoff * (2 ** ($attempt - 1)),
-                when: fn (Throwable $e): bool => $this->shouldRetry($e),
+                when: fn (Throwable $e): bool => $this->shouldRetry($e, $method),
                 throw: false,
             );
         }
@@ -171,20 +224,60 @@ final class InvoiceExpressClient
         }
     }
 
-    private function shouldRetry(Throwable $e): bool
+    /**
+     * Only idempotent methods are retried on connection errors / 5xx: a write
+     * that timed out or returned 5xx may already have been committed upstream,
+     * and repeating it could issue a duplicate fiscal document. A 429 is safe
+     * to repeat for any method because the request was rejected, not executed.
+     * `retry.writes = true` restores the pre-3.3 behaviour.
+     */
+    private function shouldRetry(Throwable $e, string $method): bool
     {
+        $idempotent = in_array($method, ['GET', 'HEAD'], true) || $this->retryWrites;
+
         if ($e instanceof ConnectionException) {
-            return true;
+            return $idempotent;
         }
 
         if ($e instanceof RequestException) {
-            $response = $e->response;
-            $status = $response->status();
+            $status = $e->response->status();
 
-            return in_array($status, [429, 500, 502, 503, 504], true);
+            if ($status === 429) {
+                return true;
+            }
+
+            return $idempotent && in_array($status, [500, 502, 503, 504], true);
         }
 
         return false;
+    }
+
+    /**
+     * Wrap a transport failure without leaking the api_key. Guzzle embeds the
+     * full request URL (including the `api_key` query string) in its messages,
+     * so neither the message nor the previous exception may carry it.
+     */
+    private function sanitizedFailure(Throwable $e, string $endpoint): InvoiceExpressException
+    {
+        $message = $this->scrub($e->getMessage());
+
+        return new ConnectionFailedException(
+            "InvoiceXpress connection error on {$endpoint}: ".$message,
+            code: 0,
+            previous: new RuntimeException($message),
+        );
+    }
+
+    /**
+     * Remove the api_key (raw, url-encoded and as a query parameter) from text.
+     */
+    private function scrub(string $text): string
+    {
+        if ($this->apiKey !== '') {
+            $text = str_replace([$this->apiKey, urlencode($this->apiKey), rawurlencode($this->apiKey)], '[redacted]', $text);
+        }
+
+        return (string) preg_replace('/(api_key=)[^&\s"\']*/i', '$1[redacted]', $text);
     }
 
     /**
@@ -253,6 +346,6 @@ final class InvoiceExpressClient
      */
     private function bodySnippet(Response $response): string
     {
-        return Str::limit($response->body(), 500);
+        return Str::limit($this->scrub($response->body()), 500);
     }
 }

@@ -19,5 +19,6 @@ final readonly class PaymentCanceled
         public DocumentType $type,
         public int $documentId,
         public int $paymentId,
+        public ?string $accountName = null,
     ) {}
 }

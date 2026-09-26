@@ -20,5 +20,6 @@ final readonly class EmailSent
         public DocumentType $type,
         public int $documentId,
         public EmailMessage $message,
+        public ?string $accountName = null,
     ) {}
 }

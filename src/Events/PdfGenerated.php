@@ -15,5 +15,6 @@ final readonly class PdfGenerated
         public DocumentType $type,
         public int $documentId,
         public int $bytes,
+        public ?string $accountName = null,
     ) {}
 }

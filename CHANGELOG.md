@@ -5,6 +5,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-09-26
+
+Hardening release for multi-tenant and production use. Source-compatible with 3.x; one default behaviour changes (write retries, see below and `UPGRADE.md`).
+
+### Changed
+
+- **`POST`/`PUT`/`DELETE` are no longer retried on connection errors or 5xx by default.** A write that timed out or returned 5xx may already have been committed by InvoiceXpress, so repeating it could issue a duplicate fiscal document. Only idempotent requests (`GET`/`HEAD`) keep the exponential-backoff retry on connection errors and 5xx. `429` is still retried for every method (the request was rejected, not executed). Set `retry.writes` (`INVOICEEXPRESS_RETRY_WRITES=true`) to restore the pre-3.3 behaviour.
+- **`pdf()` downloads through the package HTTP client** (configured `timeout`, retry on connection errors) instead of `file_get_contents()` without a timeout. Failures now throw `PdfDownloadException` instead of silently returning an empty string. Only `http(s)` links are accepted.
+
+### Fixed
+
+- **`changeState()` / `finalize()` / `cancel()` / `settle()` always hit `invoices/{id}/change-state.json`**, wrong for credit notes, debit notes, invoice-receipts and simplified invoices. They now take an optional trailing `?DocumentType $type` and use the per-type root (`credit_notes/`, `invoice_receipts/`, ...). Omitting it keeps the old `invoices/` behaviour. The root key of the payload stays `invoice` for every type, as in the official API reference. `email()` takes the same optional `$type`. Only `invoices`, `simplified_invoices`, `invoice_receipts`, `credit_notes` and `debit_notes` are documented by InvoiceXpress for change-state; for `receipts`, `cash_invoices` and `vat_moss_invoices` the package uses the type's own root, unconfirmed against the API.
+- **The `api_key` could leak through exceptions.** The key travels in the query string and Guzzle's `ConnectionException` embeds the full URL in its message and trace. Transport failures are now wrapped in `ConnectionFailedException` (a subclass of `InvoiceExpressException`) whose message and `previous` are scrubbed of the key, raw and URL-encoded; the key is also scrubbed from echoed upstream error bodies.
+
+### Added
+
+- **`accountName` on lifecycle events** — `DocumentCreated`, `DocumentFinalized`, `DocumentPaid`, `DocumentCanceled`, `DocumentDeleted`, `EmailSent`, `PaymentReceived`, `PaymentCanceled` and `PdfGenerated` carry an optional trailing `?string $accountName` (the InvoiceXpress account the call ran against, including `useAccount()`), so a multi-tenant listener can filter by tenant. It is `null` on events raised from incoming webhooks (the payload does not identify the account) and when constructing events by hand.
+- `ConnectionFailedException`, `PdfDownloadException`, `InvoiceExpressClient::download()`, config `retry.writes`.
+
 ## [3.2.0] - 2026-08-19
 
 VAT-exempt documents could not be issued, and the error that said so was unreadable. Both fixes verified against a live account.
